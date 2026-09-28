@@ -52,7 +52,7 @@ class SchemaGuardianExtractor:
         self.client = instructor.from_genai(
             self.raw_client,
             use_async=True,
-            mode=instructor.Mode.TOOLS,
+            mode=instructor.Mode.GENAI_TOOLS,
         )
 
     async def extract_catalyst(

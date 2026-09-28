@@ -38,7 +38,23 @@ def test_ticker_field_validator_clean_and_reject() -> None:
     )
     assert cat_macro.ticker == "MACRO"
 
-    # Invalid numeric/symbol ticker must raise ValidationError
+    # Valid non-alphabetic NSE symbols with digits, ampersands, hyphens
+    for raw_symbol, expected in [
+        ("3mindia", "3MINDIA"),
+        ("  m&m  ", "M&M"),
+        ("bajaj-auto", "BAJAJ-AUTO"),
+    ]:
+        cat_special = MarketCatalyst(
+            ticker=raw_symbol,
+            sentiment_score=0.4,
+            confidence=0.9,
+            event_category="EARNINGS",
+            key_drivers=["Strong revenue growth"],
+            recommended_action="LONG",
+        )
+        assert cat_special.ticker == expected
+
+    # Invalid ticker with prohibited punctuation must raise ValidationError
     with pytest.raises(ValidationError) as exc_info:
         MarketCatalyst(
             ticker="TCS_123!",
@@ -48,7 +64,7 @@ def test_ticker_field_validator_clean_and_reject() -> None:
             key_drivers=["Strong margins"],
             recommended_action="LONG",
         )
-    assert "Must be an alphabetic uppercase symbol" in str(exc_info.value)
+    assert "Must be 'MACRO' or a valid uppercase NSE symbol" in str(exc_info.value)
 
 
 def test_sentiment_score_bounds_enforced() -> None:

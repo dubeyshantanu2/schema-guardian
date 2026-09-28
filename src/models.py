@@ -16,7 +16,7 @@ class MarketCatalyst(BaseModel):
     """
 
     ticker: str = Field(
-        description="NSE Ticker symbol in uppercase alphabetic characters (e.g. 'RELIANCE', 'TCS') or 'MACRO' if market-wide"
+        description="NSE Ticker symbol in uppercase (e.g. 'RELIANCE', '3MINDIA', 'M&M', 'BAJAJ-AUTO') or 'MACRO' if market-wide"
     )
     sentiment_score: float = Field(
         ge=-1.0,
@@ -48,12 +48,15 @@ class MarketCatalyst(BaseModel):
         """Validate and normalize ticker format.
 
         Strips whitespace, converts to uppercase, and verifies that the string
-        is either alphabetic or equals 'MACRO'.
+        is either 'MACRO' or a valid NSE symbol consisting of uppercase alphanumeric
+        characters, ampersands, or hyphens (e.g. '3MINDIA', 'M&M', 'BAJAJ-AUTO').
         """
+        import re
+
         clean = v.strip().upper()
-        if not (clean.isalpha() or clean == "MACRO"):
+        if not re.match(r"^(MACRO|[A-Z0-9&-]{1,20})$", clean):
             raise ValueError(
-                f"Ticker '{v}' is invalid. Must be an alphabetic uppercase symbol (e.g. 'INFY') or 'MACRO'."
+                f"Ticker '{v}' is invalid. Must be 'MACRO' or a valid uppercase NSE symbol (e.g. 'INFY', '3MINDIA', 'M&M', 'BAJAJ-AUTO')."
             )
         return clean
 
