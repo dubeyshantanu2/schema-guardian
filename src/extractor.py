@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from google import genai
 import instructor
 
-from src.models import MarketCatalyst, CatalystReport
+from src.models import MarketCatalyst, CatalystReport, ExtractionMetrics
 
 # Load environment variables from .env
 load_dotenv()
@@ -118,3 +118,81 @@ class SchemaGuardianExtractor:
 
         latency = time.perf_counter() - start_time
         return response, latency
+
+    async def extract_catalyst_with_metrics(
+        self,
+        text: str,
+        max_retries: int = 2,
+    ) -> Tuple[MarketCatalyst, ExtractionMetrics]:
+        """Extract MarketCatalyst and collect detailed token telemetry and cost metrics."""
+        start_time = time.perf_counter()
+
+        response, raw_completion = await self.client.chat.completions.create_with_completion(
+            model=self.model_name,
+            response_model=MarketCatalyst,
+            max_retries=max_retries,
+            messages=[
+                {"role": "system", "content": SYSTEM_EXTRACTION_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Extract market catalyst from following financial text:\n\n{text}",
+                },
+            ],
+        )
+
+        latency = time.perf_counter() - start_time
+        usage = getattr(raw_completion, "usage_metadata", None)
+        prompt_tokens = getattr(usage, "prompt_token_count", 0) or 0
+        candidates_tokens = getattr(usage, "candidates_token_count", 0) or 0
+        total_tokens = getattr(usage, "total_token_count", 0) or (prompt_tokens + candidates_tokens)
+
+        # Gemini 2.5 Flash token pricing: $0.075 / 1M prompt tokens, $0.30 / 1M output tokens
+        cost_usd = (prompt_tokens * 0.000000075) + (candidates_tokens * 0.00000030)
+
+        metrics = ExtractionMetrics(
+            latency_seconds=round(latency, 3),
+            prompt_tokens=prompt_tokens,
+            candidates_tokens=candidates_tokens,
+            total_tokens=total_tokens,
+            estimated_cost_usd=round(cost_usd, 7),
+        )
+        return response, metrics
+
+    async def extract_report_with_metrics(
+        self,
+        text: str,
+        max_retries: int = 2,
+    ) -> Tuple[CatalystReport, ExtractionMetrics]:
+        """Extract CatalystReport and collect detailed token telemetry and cost metrics."""
+        start_time = time.perf_counter()
+
+        response, raw_completion = await self.client.chat.completions.create_with_completion(
+            model=self.model_name,
+            response_model=CatalystReport,
+            max_retries=max_retries,
+            messages=[
+                {"role": "system", "content": SYSTEM_EXTRACTION_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Extract structured market report with all catalysts from text:\n\n{text}",
+                },
+            ],
+        )
+
+        latency = time.perf_counter() - start_time
+        usage = getattr(raw_completion, "usage_metadata", None)
+        prompt_tokens = getattr(usage, "prompt_token_count", 0) or 0
+        candidates_tokens = getattr(usage, "candidates_token_count", 0) or 0
+        total_tokens = getattr(usage, "total_token_count", 0) or (prompt_tokens + candidates_tokens)
+
+        cost_usd = (prompt_tokens * 0.000000075) + (candidates_tokens * 0.00000030)
+
+        metrics = ExtractionMetrics(
+            latency_seconds=round(latency, 3),
+            prompt_tokens=prompt_tokens,
+            candidates_tokens=candidates_tokens,
+            total_tokens=total_tokens,
+            estimated_cost_usd=round(cost_usd, 7),
+        )
+        return response, metrics
+
