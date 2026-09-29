@@ -146,8 +146,11 @@ class SchemaGuardianExtractor:
         candidates_tokens = getattr(usage, "candidates_token_count", 0) or 0
         total_tokens = getattr(usage, "total_token_count", 0) or (prompt_tokens + candidates_tokens)
 
+        # In Gemini 2.5 Flash, output tokens include visible candidates and thinking tokens
+        output_tokens = max(candidates_tokens, total_tokens - prompt_tokens)
+
         # Gemini 2.5 Flash token pricing: $0.075 / 1M prompt tokens, $0.30 / 1M output tokens
-        cost_usd = (prompt_tokens * 0.000000075) + (candidates_tokens * 0.00000030)
+        cost_usd = (prompt_tokens * 0.000000075) + (output_tokens * 0.00000030)
 
         metrics = ExtractionMetrics(
             latency_seconds=round(latency, 3),
@@ -185,7 +188,10 @@ class SchemaGuardianExtractor:
         candidates_tokens = getattr(usage, "candidates_token_count", 0) or 0
         total_tokens = getattr(usage, "total_token_count", 0) or (prompt_tokens + candidates_tokens)
 
-        cost_usd = (prompt_tokens * 0.000000075) + (candidates_tokens * 0.00000030)
+        # In Gemini 2.5 Flash, output tokens include visible candidates and thinking tokens
+        output_tokens = max(candidates_tokens, total_tokens - prompt_tokens)
+
+        cost_usd = (prompt_tokens * 0.000000075) + (output_tokens * 0.00000030)
 
         metrics = ExtractionMetrics(
             latency_seconds=round(latency, 3),

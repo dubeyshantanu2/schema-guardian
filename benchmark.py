@@ -106,12 +106,14 @@ async def run_benchmarks() -> None:
     total_latency = 0.0
     total_prompt_tok = 0
     total_cand_tok = 0
+    total_reported_tok = 0
     total_cost = 0.0
 
     for r in results:
         total_latency += r["latency"]
         total_prompt_tok += r["prompt_tok"]
         total_cand_tok += r["cand_tok"]
+        total_reported_tok += r["total_tok"]
         total_cost += r["cost_usd"]
 
         print(
@@ -123,13 +125,17 @@ async def run_benchmarks() -> None:
     print("-" * 88)
     n = len(results)
     avg_latency = total_latency / n
-    total_tok = total_prompt_tok + total_cand_tok
     cost_per_1k_runs = (total_cost / n) * 1000
+    total_thinking_tok = max(0, total_reported_tok - (total_prompt_tok + total_cand_tok))
+
+    token_breakdown = f"{total_prompt_tok:,} prompt + {total_cand_tok:,} visible candidates"
+    if total_thinking_tok > 0:
+        token_breakdown += f" + {total_thinking_tok:,} thinking"
 
     print(f"\n📊 AGGREGATE TELEMETRY SUMMARY:")
     print(f"  • Total Runs Processed:      {n}")
     print(f"  • Average Latency:           {avg_latency:.2f} seconds")
-    print(f"  • Total Tokens Consumed:     {total_tok:,} tokens ({total_prompt_tok:,} prompt + {total_cand_tok:,} completion)")
+    print(f"  • Total Tokens Consumed:     {total_reported_tok:,} tokens ({token_breakdown})")
     print(f"  • Cumulative Incurred Cost:  ${total_cost:.7f} USD")
     print(f"  • Projected Cost / 1k Runs:  ${cost_per_1k_runs:.4f} USD")
     print("=" * 88)
